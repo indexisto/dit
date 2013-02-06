@@ -1,0 +1,14 @@
+//snippets
+Map<String, Object> stats = context.getStats();
+
+VariableResolver vr = context.getVariableResolver();
+String code = (String) vr.resolve("${iblockelement.code}");
+resolver.resolve("doc.iblockelement.iblock_id")
+
+l = EvaluatorBag.parseParams(expression, resolver);
+if (l.size() != 1) {}
+
+String[] namespaces = expression.split("\\.");
+
+context.getAllEntityFields().size();
+context.getSessionAttribute("tst", "iblockelement");

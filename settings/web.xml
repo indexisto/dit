@@ -1,0 +1,41 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<web-app version="2.4"
+         xmlns="http://java.sun.com/xml/ns/j2ee"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://java.sun.com/xml/ns/j2ee 
+         http://java.sun.com/xml/ns/j2ee/web-app_2_4.xsd" >
+  <display-name>indexisto</display-name>
+  <session-config>
+	<session-timeout>15</session-timeout>
+  </session-config>         
+ 
+
+	<servlet>
+		<description>
+		</description>
+		<display-name>Search Servlet</display-name>
+		<servlet-name>SearchServlet</servlet-name>
+		<servlet-class>com.indexisto.web.dit.SearchServlet</servlet-class>
+	</servlet>	
+	<servlet-mapping>
+		<servlet-name>SearchServlet</servlet-name>
+		<url-pattern>/api/search</url-pattern>
+	</servlet-mapping>
+	
+	<servlet>
+		<description>
+		</description>
+		<display-name>Data Import Servlet</display-name>
+		<servlet-name>DataImportServlet</servlet-name>
+		<servlet-class>com.indexisto.web.dit.DataImportServlet</servlet-class>
+	</servlet>	
+	<servlet-mapping>
+		<servlet-name>DataImportServlet</servlet-name>
+		<url-pattern>/dataimport</url-pattern>
+	</servlet-mapping>	
+
+	<welcome-file-list>
+		<welcome-file>index.jsp</welcome-file>
+	</welcome-file-list>  
+ 
+</web-app>

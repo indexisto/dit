@@ -1,0 +1,83 @@
+<dataConfig>
+  <!--
+        <script><![CDATA[
+                function constructForumUrl(row) {
+                    //var pieces = row.get('category').split('/');
+                    var urlStart = 'http://46.4.39.138:8085/forum/messages';
+		    var url = urlStart + '/forum' + row.get('forum_id') + 
+				'/topic' + row.get('topic_id') +
+				'/message' + row.get('id') + 
+				'/#message' + row.get('id');
+                    row.put('url', url);
+                    //row.remove('category');
+                    return row;
+                }
+        ]]></script>
+  -->
+
+        <script><![CDATA[
+                function ciu(row, context) {
+                     //var pieces = row.get('detail_page_url').split('/');
+		     //var url = row.get('iblock.detail_page_url');
+                     //for (var i=0; i<pieces.length; i++) {
+                     //	url += ' --- ' + pieces[i];
+                     //}
+var url = 'hello ';
+try {
+  //url += 'size: ' + row.size();
+  url += 'context: ' + context.getResolvedEntityAttribute('code') + ' --- ' + context.getResolvedEntityAttribute('section_code');
+  //url += row.get('detail_page_url');
+} catch(err) {
+  url += 'error: ' + err.message;
+}
+                     row.put('url', url);
+                     return row;
+                }
+        ]]></script>
+ 
+
+
+  <dataSource type="JdbcDataSource" 
+              driver="com.mysql.jdbc.Driver"
+              url="jdbc:mysql://localhost/bitrix" 
+              user="root" 
+              password="s2s"/>
+  <!--<document>
+    <entity name="id" 
+	    transformer="script:constructForumUrl" 
+            query="select id, forum_id, topic_id, post_date, post_message from b_forum_message">
+	<entity name="topic" query="select title, posts from b_forum_topic where id='${id.id}'">
+        </entity>
+    </entity>
+  </document> -->
+
+  <function name="makeUpperTest" class="com.indexisto.dih.evaluator.TestEvaluator"/>
+  <document name="doc" onImportStart ="com.indexisto.dih.listener.ImportStart" onImportEnd="com.indexisto.dih.listener.ImportEnd">
+    <entity name="iblockelement"
+	 tst = "check tst" 
+	 query="select id, iblock_id, iblock_section_id, code from b_iblock_element">
+	<entity name="section" query="select code as section_code from b_iblock_section where id='${iblockelement.iblock_section_id}'">
+		<entity name="iblock"
+		 code = "${iblockelement.code}" 
+		 section_code = "${section.section_code}" 
+       	 	 transformer="script:ciu" 
+		 query="select detail_page_url from b_iblock where id='${iblockelement.iblock_id}'">
+        	</entity>
+		<entity name="te" 
+		 processor="com.indexisto.dih.processor.TestProcessor" 
+		 query="select detail_page_url from b_iblock where id='${dataimporter.functions.makeUpperTest(doc.iblockelement.iblock_id)}'">        	
+		</entity>		
+	        <entity id="t2" name="t2" 
+			transformer="com.indexisto.dih.transformer.TestTransformer" 
+			processor="com.indexisto.dih.processor.TestProcessor2">
+    		</entity>
+	</entity>
+    </entity>
+  </document>
+
+<!--  <document id="t1" onImportStart ="com.indexisto.dih.listener.ImportStart" onImportEnd="com.indexisto.dih.listener.ImportEnd">
+    <entity id="t2" name="iblockelement" processor="com.indexisto.dih.processor.TestProcessor2" 
+	 tst = "check tst" query="select id, iblock_id, iblock_section_id, code from b_iblock_element">
+    </entity>
+  </document>-->
+</dataConfig>

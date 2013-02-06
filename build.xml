@@ -1,0 +1,127 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project name="dit" basedir="." default="build">
+
+	<property name="src.dir" value="src"/>
+	<property name="classes.dir" value="WEB-INF/classes"/>
+	<property name="lib-initial.dir" value="lib"/>
+	<property name="lib.dir" value="WEB-INF/lib"/>
+	<property name="webinf.dir" value="WEB-INF"/>
+	<property name="settings.dir" value="settings"/>
+
+	<path id="classpath">
+		<fileset dir="${lib.dir}">
+			<include name="*.jar" />
+		</fileset>
+		<fileset dir="${lib-initial.dir}/j2ee/">
+			<include name="**/*.jar" />
+		</fileset>
+		<fileset dir="${lib-initial.dir}/http/">
+			<include name="**/*.jar" />
+		</fileset>
+		<fileset dir="${lib-initial.dir}/json/">
+			<include name="**/*.jar" />
+		</fileset>
+		<fileset dir="${lib-initial.dir}/jdbc/">
+			<include name="**/*.jar" />
+		</fileset>
+		<fileset dir="${lib-initial.dir}/solr/">
+			<include name="**/*.jar" />
+		</fileset>
+		<pathelement path="${classes.dir}" />
+	</path>
+
+	<target name="-clean" description="Clean output directories">
+		<delete includeEmptyDirs="true">
+			<fileset dir="${classes.dir}">
+				<include name="**/*" />
+			</fileset>
+		</delete>
+		<delete includeEmptyDirs="true">
+			<fileset dir="${lib.dir}">
+				<include name="**/*" />
+			</fileset>
+		</delete>
+		<delete includeEmptyDirs="true">
+			<fileset dir="${webinf.dir}">
+				<include name="**/*.xml" />
+			</fileset>
+		</delete>
+		<echo message="project is cleaned up" />
+	</target>
+
+	<target name="-setup-lib" depends="-clean">
+		<copy todir="${lib.dir}">
+			<fileset dir="${lib-initial.dir}/http">
+				<include name="*.jar" />
+			</fileset>
+			<fileset dir="${lib-initial.dir}/json">
+				<include name="*.jar" />
+			</fileset>
+			<fileset dir="${lib-initial.dir}/jdbc">
+				<include name="*.jar" />
+			</fileset>
+			<fileset dir="${lib-initial.dir}/solr">
+				<include name="*.jar" />
+			</fileset>			
+		</copy>
+		<echo message="lib setup complete" />
+	</target>
+
+	<target name="-setup" depends="-setup-lib">
+		<!--
+		<copy todir="${classes.dir}">
+			<fileset dir="${settings.dir}">
+				<include name="log4j.xml" />
+			</fileset>
+		</copy>
+		<copy todir="${webinf.dir}">
+			<fileset dir="${settings.dir}">
+				<include name="springmvc-servlet.xml" />
+			</fileset>
+		</copy>
+		-->
+		<echo message="setup type: ${setup.type}" />
+		<echo message="setup complete" />
+	</target>
+
+	<target name="setup-dev" depends="-setup">
+		<property name="setup.type" value="development" />
+	</target>
+
+	<target name="clean_build">
+		<delete includeEmptyDirs="true">
+			<fileset dir="${classes.dir}">
+				<include name="**/*.class" />
+				<exclude name="**/*.xml" />
+				<exclude name="**/*.properties" />
+			</fileset>
+		</delete>
+		<mkdir dir="${classes.dir}" />
+		<delete file="${webinf.dir}/web.xml" />
+		<echo message="build is cleaned up" />
+	</target>
+
+
+	<target name="build" depends="clean_build">
+		<javac destdir="${classes.dir}" source="1.7" target="1.7" debug="true" deprecation="false" optimize="false" failonerror="true">
+			<src path="${src.dir}" />
+			<classpath refid="classpath" />
+		</javac>
+		<copy todir="${classes.dir}">
+			<fileset dir="${settings.dir}">
+				<include name="log4j.xml" />
+				<include name="*.properties" />
+			</fileset>
+		</copy>
+		<copy file="${settings.dir}/web.xml" todir="${webinf.dir}" />
+		<copy file="${settings.dir}/dit.war.dodeploy" todir=".." />
+		<echo message="build sucessful" />
+	</target>
+
+	<target name="package-war">
+		<jar destfile="dit.war">
+			<fileset dir="." includes="WEB-INF/**/*, jsp/**/*, resources/**/*, *.jsp" />
+		</jar>
+	</target>
+
+</project>
