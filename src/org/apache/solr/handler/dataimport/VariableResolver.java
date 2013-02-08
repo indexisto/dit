@@ -16,6 +16,8 @@
  */
 package org.apache.solr.handler.dataimport;
 
+import java.util.Map;
+
 /**
  * <p>
  * This class is more or less like a Map. But has more intelligence to resolve
@@ -49,4 +51,9 @@ public abstract class VariableResolver {
    * @return the string with the placeholders replaced with their values
    */
   public abstract String replaceTokens(String template);
+
+  /*
+   *  Vladimir Mikhel
+   */
+  public abstract VariableResolverImpl addNamespace(String name, Map<String, Object> map);
 }

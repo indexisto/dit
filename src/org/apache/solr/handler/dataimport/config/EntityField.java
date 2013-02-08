@@ -39,14 +39,14 @@ public class EntityField {
   private final Map<String, String> allAttributes;
 
   public EntityField(Builder b) {
-    this.column = b.column;
-    this.name = b.name;
-    this.boost = b.boost;
-    this.toWrite = b.toWrite;
-    this.multiValued = b.multiValued;
-    this.dynamicName = b.dynamicName;
-    this.entity = b.entity;
-    this.allAttributes = Collections.unmodifiableMap(new HashMap<String,String>(b.allAttributes));
+    column = b.column;
+    name = b.name;
+    boost = b.boost;
+    toWrite = b.toWrite;
+    multiValued = b.multiValued;
+    dynamicName = b.dynamicName;
+    entity = b.entity;
+    allAttributes = Collections.unmodifiableMap(new HashMap<String,String>(b.allAttributes));
   }
 
   public String getName() {
@@ -80,8 +80,8 @@ public class EntityField {
   public Map<String,String> getAllAttributes() {
     return allAttributes;
   }
-  
-  public static class Builder {    
+
+  public static class Builder {
     public String column;
     public String name;
     public float boost;
@@ -90,17 +90,20 @@ public class EntityField {
     public boolean dynamicName = false;
     public Entity entity;
     public Map<String, String> allAttributes = new HashMap<String,String>();
-    
+
     public Builder(Element e) {
-      this.name = ConfigParseUtil.getStringAttribute(e, DataImporter.NAME, null);
-      this.column = ConfigParseUtil.getStringAttribute(e, DataImporter.COLUMN, null);
+      name = ConfigParseUtil.getStringAttribute(e, DataImporter.NAME, null);
+      column = ConfigParseUtil.getStringAttribute(e, DataImporter.COLUMN, null);
+      // Vladimir Mikhel
+      multiValued = Boolean.parseBoolean(ConfigParseUtil.getStringAttribute(e, DataImporter.MULTI_VALUED, "false"));
+      // /
       if (column == null) {
         throw new DataImportHandlerException(SEVERE, "Field must have a column attribute");
       }
-      this.boost = Float.parseFloat(ConfigParseUtil.getStringAttribute(e, "boost", "1.0f"));
-      this.allAttributes = new HashMap<String, String>(ConfigParseUtil.getAllAttributes(e));
+      boost = Float.parseFloat(ConfigParseUtil.getStringAttribute(e, "boost", "1.0f"));
+      allAttributes = new HashMap<String, String>(ConfigParseUtil.getAllAttributes(e));
     }
-    
+
     public String getNameOrColumn() {
       return name==null ? column : name;
     }

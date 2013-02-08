@@ -3,6 +3,8 @@
 Edited files:
  DataImporter.java
  RequestInfo.java
+ EntityField.java
+ VariableResolver.java
 
 Exception passing changed in:
  -SqlEntityProcessor (ok by itself)
