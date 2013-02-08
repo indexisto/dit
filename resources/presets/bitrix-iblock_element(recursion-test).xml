@@ -1,0 +1,45 @@
+<dataConfig>
+
+  <script><![CDATA[  
+    function transformIt(row, context) {
+      var ids = row.get('id');  
+      var tst = ''; 
+      try { 
+        tst = ids.get(1);  
+      } catch(err) { 
+        tst = 'error: ' + err.message; 
+      } 
+      row.put('transformed', tst); 
+      return row; 
+    } 
+  ]]></script>
+    
+  <document>
+  
+    <entity name="document"
+      query="SELECT  
+         id, iblock_id, iblock_section_id, 
+         preview_picture, code as element_code,  
+         name, preview_text, detail_text, searchable_content, 
+         date_create, created_by, active_from, active_to  
+         FROM b_iblock_element WHERE active='Y' LIMIT 80, 100">
+      <field column="name" name="name" multiValued="true" />
+
+      <entity name="section"
+        processor="com.indexisto.dit.processor.HierarchyProcessor"
+        transformer="script:transformIt"
+        query="SELECT 
+              id, iblock_section_id 
+              FROM b_iblock_section 
+              WHERE id = '${placeholder}' "
+        startValue="${document.iblock_section_id}" 
+        parentIdField="iblock_section_id"
+        hierarchyEndValue="null">
+        <field column="id" name="id" multiValued="true" />
+        <field column="iblock_section_id" name="iblock_section_id" multiValued="true" />
+        <field column="transformed" />
+      </entity>
+    </entity>
+
+  </document>
+</dataConfig>
