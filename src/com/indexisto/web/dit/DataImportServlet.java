@@ -36,6 +36,10 @@ public class DataImportServlet extends HttpServlet{
 		final String mapping = request.getParameter("mapping");
 		final String entity = request.getParameter("entity");
 
+        final String requestsLog = request.getParameter("requestsLog");
+        final String responsesLog = request.getParameter("responsesLog");
+        final String documentsLog = request.getParameter("documentsLog");
+
 
         final ImportProcessLogger processLogger = new ImportProcessLogger();
 
@@ -56,6 +60,9 @@ public class DataImportServlet extends HttpServlet{
 		String result = "Data import finished successfully";
 		try {
 			DataImportTool.snatch(mapping, writer, dataImportParams);
+		    if (processLogger.getDocuments().size() == 0) {
+		        result = "NOTHING IS IMPORTED - check your settings";
+		    }
 		} catch (final DataSourceException e) {
 			result = "Data source problem (check snatcher settings)!";
 		} catch (final WriterException e) {
@@ -75,26 +82,32 @@ public class DataImportServlet extends HttpServlet{
 		out.println("<html><head></head><body>");
 		out.println(result);
 
-		out.println("<hr><hr><hr>");
-        final List<LogRecord> sqlRequests = processLogger.getSqlRequests();
-        for(final LogRecord record : sqlRequests) {
-            out.println("----- SQL запрос ----- " + sdf.format(record.getTime()) + " -----</br>");
-            out.println(record.getMessage() + "</br></br>");
-        }
+		if (requestsLog != null) {
+    		out.println("<hr><hr><hr>");
+            final List<LogRecord> sqlRequests = processLogger.getSqlRequests();
+            for(final LogRecord record : sqlRequests) {
+                out.println("----- SQL запрос ----- " + sdf.format(record.getTime()) + " -----</br>");
+                out.println(record.getMessage() + "</br></br>");
+            }
+		}
 
-        out.println("<hr><hr><hr>");
-        final List<LogRecord> sqlResponses = processLogger.getSqlResponses();
-        for(final LogRecord record : sqlResponses) {
-            out.println("----- SQL ответ ----- " + sdf.format(record.getTime()) + " -----</br>");
-            out.println(record.getMessage() + "</br></br>");
-        }
+		if (responsesLog != null) {
+            out.println("<hr><hr><hr>");
+            final List<LogRecord> sqlResponses = processLogger.getSqlResponses();
+            for(final LogRecord record : sqlResponses) {
+                out.println("----- SQL ответ ----- " + sdf.format(record.getTime()) + " -----</br>");
+                out.println(record.getMessage() + "</br></br>");
+            }
+		}
 
-        out.println("<hr><hr><hr>");
-        final List<LogRecord> documents = processLogger.getDocuments();
-        for(final LogRecord record : documents) {
-            out.println("----- Документ ----- " + sdf.format(record.getTime()) + " -----</br>");
-            out.println(record.getMessage() + "</br></br>");
-        }
+		if (documentsLog != null) {
+            out.println("<hr><hr><hr>");
+            final List<LogRecord> documents = processLogger.getDocuments();
+            for(final LogRecord record : documents) {
+                out.println("----- Документ ----- " + sdf.format(record.getTime()) + " -----</br>");
+                out.println(record.getMessage() + "</br></br>");
+            }
+		}
 
         out.println("<body></html>");
 	}
