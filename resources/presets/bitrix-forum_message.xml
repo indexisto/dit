@@ -1,0 +1,36 @@
+<dataConfig>
+  <script><![CDATA[	
+    function ciu(row, context) {	
+      var forumId = row.get('forum_id');	
+      forumId += ' script test';	
+      row.put('forum_id', forumId);	
+      return row;
+    } 
+  ]]></script>
+  <document>
+    <entity name="forum_message" transformer="script:ciu"
+      query="SELECT 
+            fm.id, fm.forum_id, fm.topic_id, fm.attach_img, 
+            fm.post_date, fm.post_message, fm.post_message_html, 
+            fm.author_name,
+            f.name AS forum_name 
+            FROM b_forum_message fm
+            LEFT JOIN b_forum f ON f.id = fm.forum_id 
+            WHERE fm.approved='Y' AND f.active='Y'">
+      <field column="id" name="id" />
+      <field column="forum_id" name="forum_id" />
+      <field column="post_date" name="post_date" />
+      <field column="post_message" name="post_message" />
+      <field column="forum_name" name="forum_name" />
+      
+      <!-- TODO: recursion selection -->
+      <entity name="forum_topic"
+        query="SELECT title AS forum_topic_title   
+        FROM b_forum_topic 
+        WHERE id='${forum_message.topic_id}' AND approved='Y' ">
+        <field column="forum_topic_title" name="forum_topic_title" />
+      </entity>
+      
+    </entity>
+  </document>
+</dataConfig>
