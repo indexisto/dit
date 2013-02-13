@@ -11,3 +11,9 @@ Exception passing changed in:
  -EntityProcessorWrapper (ok by itself - wrapAndThrow(SEVERE, e);)
  +DocBuilder
  +DataImporter 
+ 
+Solr cut off marked with comment:
+// Solr cut off
+
+Places to check marked with:
+// Check

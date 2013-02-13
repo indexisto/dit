@@ -16,24 +16,30 @@ package org.apache.solr.handler.dataimport;
  * limitations under the License.
  */
 
-import org.apache.solr.core.SolrCore;
 import static org.apache.solr.handler.dataimport.DataImportHandlerException.SEVERE;
 import static org.apache.solr.handler.dataimport.DataImportHandlerException.wrapAndThrow;
 import static org.apache.solr.handler.dataimport.DocBuilder.loadClass;
 import static org.apache.solr.handler.dataimport.config.ConfigNameConstants.CLASS;
 import static org.apache.solr.handler.dataimport.config.ConfigNameConstants.NAME;
 
-import org.apache.solr.util.DateMathParser;
-import org.apache.solr.client.solrj.util.ClientUtils;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
 import java.net.URLEncoder;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Date;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Locale;
+import java.util.Map;
+import java.util.TimeZone;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
+
+import org.apache.solr.client.solrj.util.ClientUtils;
+import org.apache.solr.core.SolrCore;
+import org.apache.solr.util.DateMathParser;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * <p> Holds definitions for evaluators provided by DataImportHandler </p> <p/> <p> Refer to <a
@@ -46,7 +52,7 @@ import java.util.regex.Pattern;
  */
 public class EvaluatorBag {
   private static final Logger LOG = LoggerFactory.getLogger(EvaluatorBag.class);
-  
+
   public static final String DATE_FORMAT_EVALUATOR = "formatDate";
 
   public static final String URL_ENCODE_EVALUATOR = "encodeUrl";
@@ -68,11 +74,11 @@ public class EvaluatorBag {
     return new Evaluator() {
       @Override
       public String evaluate(String expression, Context context) {
-        List l = parseParams(expression, context.getVariableResolver());
+        final List l = parseParams(expression, context.getVariableResolver());
         if (l.size() != 1) {
           throw new DataImportHandlerException(SEVERE, "'escapeSql' must have at least one parameter ");
         }
-        String s = l.get(0).toString();
+        final String s = l.get(0).toString();
         // escape single quote with two single quotes, double quote
         // with two doule quotes, and backslash with double backslash.
         // See:  http://dev.mysql.com/doc/refman/4.1/en/mysql-real-escape-string.html
@@ -93,11 +99,11 @@ public class EvaluatorBag {
     return new Evaluator() {
       @Override
       public String evaluate(String expression, Context context) {
-        List l = parseParams(expression, context.getVariableResolver());
+        final List l = parseParams(expression, context.getVariableResolver());
         if (l.size() != 1) {
           throw new DataImportHandlerException(SEVERE, "'escapeQueryChars' must have at least one parameter ");
         }
-        String s = l.get(0).toString();
+        final String s = l.get(0).toString();
         return ClientUtils.escapeQueryChars(s);
       }
     };
@@ -113,15 +119,15 @@ public class EvaluatorBag {
     return new Evaluator() {
       @Override
       public String evaluate(String expression, Context context) {
-        List l = parseParams(expression, context.getVariableResolver());
+        final List l = parseParams(expression, context.getVariableResolver());
         if (l.size() != 1) {
           throw new DataImportHandlerException(SEVERE, "'encodeUrl' must have at least one parameter ");
         }
-        String s = l.get(0).toString();
+        final String s = l.get(0).toString();
 
         try {
           return URLEncoder.encode(s.toString(), "UTF-8");
-        } catch (Exception e) {
+        } catch (final Exception e) {
           wrapAndThrow(SEVERE, e, "Unable to encode expression: " + expression + " with value: " + s);
           return null;
         }
@@ -143,14 +149,14 @@ public class EvaluatorBag {
     return new Evaluator() {
       @Override
       public String evaluate(String expression, Context context) {
-        List l = parseParams(expression, context.getVariableResolver());
+        final List l = parseParams(expression, context.getVariableResolver());
         if (l.size() != 2) {
           throw new DataImportHandlerException(SEVERE, "'formatDate()' must have two parameters ");
         }
         Object o = l.get(0);
         Object format = l.get(1);
         if (format instanceof VariableWrapper) {
-          VariableWrapper wrapper = (VariableWrapper) format;
+          final VariableWrapper wrapper = (VariableWrapper) format;
           o = wrapper.resolve();
           if (o == null)  {
             format = wrapper.varName;
@@ -160,19 +166,19 @@ public class EvaluatorBag {
             format = o.toString();
           }
         }
-        String dateFmt = format.toString();
-        SimpleDateFormat fmt = new SimpleDateFormat(dateFmt);
+        final String dateFmt = format.toString();
+        final SimpleDateFormat fmt = new SimpleDateFormat(dateFmt);
         Date date = null;
         if (o instanceof VariableWrapper) {
-          VariableWrapper variableWrapper = (VariableWrapper) o;
-          Object variableval = variableWrapper.resolve();
+          final VariableWrapper variableWrapper = (VariableWrapper) o;
+          final Object variableval = variableWrapper.resolve();
           if (variableval instanceof Date) {
             date = (Date) variableval;
           } else {
-            String s = variableval.toString();
+            final String s = variableval.toString();
             try {
               date = DataImporter.DATE_TIME_FORMAT.get().parse(s);
-            } catch (ParseException exp) {
+            } catch (final ParseException exp) {
               wrapAndThrow(SEVERE, exp, "Invalid expression for date");
             }
           }
@@ -181,7 +187,7 @@ public class EvaluatorBag {
           datemathfmt = datemathfmt.replaceAll("NOW", "");
           try {
             date = dateMathParser.parseMath(datemathfmt);
-          } catch (ParseException e) {
+          } catch (final ParseException e) {
             wrapAndThrow(SEVERE, e, "Invalid expression for date");
           }
         }
@@ -197,11 +203,11 @@ public class EvaluatorBag {
     evaluators.put(SQL_ESCAPE_EVALUATOR, getSqlEscapingEvaluator());
     evaluators.put(URL_ENCODE_EVALUATOR, getUrlEvaluator());
     evaluators.put(ESCAPE_SOLR_QUERY_CHARS, getSolrQueryEscapingEvaluator());
-    SolrCore core = docBuilder == null ? null : docBuilder.dataImporter.getCore();
-    for (Map<String, String> map : fn) {
+    final SolrCore core = docBuilder == null ? null : docBuilder.dataImporter.getCore();
+    for (final Map<String, String> map : fn) {
       try {
         evaluators.put(map.get(NAME), (Evaluator) loadClass(map.get(CLASS), core).newInstance());
-      } catch (Exception e) {
+      } catch (final Exception e) {
         wrapAndThrow(SEVERE, e, "Unable to instantiate evaluator: " + map.get(CLASS));
       }
     }
@@ -211,15 +217,15 @@ public class EvaluatorBag {
       public String get(Object key) {
         if (key == null)
           return null;
-        Matcher m = FORMAT_METHOD.matcher((String) key);
+        final Matcher m = FORMAT_METHOD.matcher((String) key);
         if (!m.find())
           return null;
-        String fname = m.group(1);
-        Evaluator evaluator = evaluators.get(fname);
+        final String fname = m.group(1);
+        final Evaluator evaluator = evaluators.get(fname);
         if (evaluator == null)
           return null;
-        ContextImpl ctx = new ContextImpl(null, vr, null, null, null, null, null);
-        String g2 = m.group(2);
+        final ContextImpl ctx = new ContextImpl(null, vr, null, null, null, null, null);
+        final String g2 = m.group(2);
         return evaluator.evaluate(g2, ctx);
       }
 
@@ -241,13 +247,13 @@ public class EvaluatorBag {
    * @return a List of objects which can either be a string, number or a variable wrapper
    */
   public static List parseParams(String expression, VariableResolver vr) {
-    List result = new ArrayList();
+    final List result = new ArrayList();
     expression = expression.trim();
-    String[] ss = expression.split(",");
+    final String[] ss = expression.split(",");
     for (int i = 0; i < ss.length; i++) {
       ss[i] = ss[i].trim();
       if (ss[i].startsWith("'")) {//a string param has started
-        StringBuilder sb = new StringBuilder();
+        final StringBuilder sb = new StringBuilder();
         while (true) {
           sb.append(ss[i]);
           if (ss[i].endsWith("'")) break;
@@ -262,9 +268,9 @@ public class EvaluatorBag {
       } else {
         if (Character.isDigit(ss[i].charAt(0))) {
           try {
-            Double doub = Double.parseDouble(ss[i]);
+            final Double doub = Double.parseDouble(ss[i]);
             result.add(doub);
-          } catch (NumberFormatException e) {
+          } catch (final NumberFormatException e) {
             if (vr.resolve(ss[i]) == null) {
               wrapAndThrow(
                       SEVERE, e, "Invalid number :" + ss[i] +
@@ -284,7 +290,7 @@ public class EvaluatorBag {
     VariableResolver vr;
 
     public VariableWrapper(String s, VariableResolver vr) {
-      this.varName = s;
+      varName = s;
       this.vr = vr;
     }
 
@@ -295,15 +301,15 @@ public class EvaluatorBag {
 
     @Override
     public String toString() {
-      Object o = vr.resolve(varName);
+      final Object o = vr.resolve(varName);
       return o == null ? null : o.toString();
 
     }
   }
 
-  static Pattern IN_SINGLE_QUOTES = Pattern.compile("^'(.*?)'$");
+  public static Pattern IN_SINGLE_QUOTES = Pattern.compile("^'(.*?)'$");
 
-  static DateMathParser dateMathParser = new DateMathParser(TimeZone
+  public static DateMathParser dateMathParser = new DateMathParser(TimeZone
           .getDefault(), Locale.getDefault()){
     @Override
     public Date getNow() {

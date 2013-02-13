@@ -17,13 +17,16 @@ package org.apache.solr.handler.dataimport;
  */
 
 
-import org.apache.solr.core.SolrCore;
-import org.apache.solr.handler.dataimport.config.Script;
-
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+
+import org.apache.solr.core.SolrCore;
+import org.apache.solr.handler.dataimport.config.Script;
+import org.apache.solr.handler.dataimport.datasource.DataSource;
+import org.apache.solr.handler.dataimport.processor.EntityProcessor;
+import org.apache.solr.handler.dataimport.processor.EntityProcessorWrapper;
 
 /**
  * <p>
@@ -36,19 +39,21 @@ import java.util.Map;
 public class ContextImpl extends Context {
   protected EntityProcessorWrapper epw;
 
-  private ContextImpl parent;
+  private final ContextImpl parent;
 
-  private VariableResolverImpl resolver;
+  private final VariableResolverImpl resolver;
 
-  private DataSource ds;
+  private final DataSource ds;
 
-  private String currProcess;
+  private final String currProcess;
 
   private Map<String, Object> requestParams;
 
   private DataImporter dataImporter;
 
-  private Map<String, Object> entitySession, globalSession;
+  private Map<String, Object> entitySession;
+
+private final Map<String, Object> globalSession;
 
   DocBuilder.DocWrapper doc;
 
@@ -64,7 +69,7 @@ public class ContextImpl extends Context {
     this.ds = ds;
     this.currProcess = currProcess;
     if (docBuilder != null) {
-      this.requestParams = docBuilder.getReqParams().getRawParams();
+      requestParams = docBuilder.getReqParams().getRawParams();
       dataImporter = docBuilder.dataImporter;
     }
     globalSession = global;
@@ -146,7 +151,7 @@ public class ContextImpl extends Context {
         globalSession.put(name, val);
       }
     } else if (Context.SCOPE_DOC.equals(scope)) {
-      DocBuilder.DocWrapper doc = getDocument();
+      final DocBuilder.DocWrapper doc = getDocument();
       if (doc != null) {
         doc.setSessionAttribute(name, val);
       }
@@ -168,7 +173,7 @@ public class ContextImpl extends Context {
         return globalSession.get(name);
       }
     } else if (Context.SCOPE_DOC.equals(scope)) {
-      DocBuilder.DocWrapper doc = getDocument();      
+      final DocBuilder.DocWrapper doc = getDocument();
       return doc == null ? null: doc.getSessionAttribute(name);
     } else if (SCOPE_SOLR_CORE.equals(scope)){
        return dataImporter == null ? null : dataImporter.getFromCoreScopeSession(name);
@@ -194,7 +199,7 @@ public class ContextImpl extends Context {
   }
 
   void setDoc(DocBuilder.DocWrapper docWrapper) {
-    this.doc = docWrapper;
+    doc = docWrapper;
   }
 
 
@@ -212,16 +217,16 @@ public class ContextImpl extends Context {
   @Override
   public String getScript() {
     if (dataImporter != null) {
-      Script script = dataImporter.getConfig().getScript();
+      final Script script = dataImporter.getConfig().getScript();
       return script == null ? null : script.getText();
     }
     return null;
   }
-  
+
   @Override
   public String getScriptLanguage() {
     if (dataImporter != null) {
-      Script script = dataImporter.getConfig().getScript();
+      final Script script = dataImporter.getConfig().getScript();
       return script == null ? null : script.getLanguage();
     }
     return null;
@@ -238,10 +243,10 @@ public class ContextImpl extends Context {
   public void deleteDocByQuery(String query) {
     if(docBuilder != null){
       docBuilder.writer.deleteByQuery(query);
-    } 
+    }
   }
 
-  DocBuilder getDocBuilder(){
+  public DocBuilder getDocBuilder(){
     return docBuilder;
   }
   @Override

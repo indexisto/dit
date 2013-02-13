@@ -8,7 +8,7 @@ import java.util.Map;
 import org.apache.solr.handler.dataimport.DataImportHandlerException;
 import org.apache.solr.handler.dataimport.DataImporter;
 import org.apache.solr.handler.dataimport.RequestInfo;
-import org.apache.solr.handler.dataimport.SolrWriter;
+import org.apache.solr.handler.dataimport.writer.SolrWriter;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -54,17 +54,17 @@ public class DataImportTool {
 
 		final List<LogRecord> sqlRequests = processLogger.getSqlRequests();
 		for(final LogRecord sqlRequest : sqlRequests) {
-		    log.debug("request: " + sqlRequest.getMessage());
+		    log.info("request: " + sqlRequest.getMessage());
 		}
 
         final List<LogRecord> sqlResponses = processLogger.getSqlResponses();
         for(final LogRecord sqlResponse : sqlResponses) {
-            log.debug("response: " + sqlResponse.getMessage());
+            log.info("response: " + sqlResponse.getMessage());
         }
 
         final List<LogRecord> documents = processLogger.getDocuments();
         for(final LogRecord document : documents) {
-            log.debug("document: " + document.getMessage());
+            log.info("document: " + document.getMessage());
         }
 	}
 

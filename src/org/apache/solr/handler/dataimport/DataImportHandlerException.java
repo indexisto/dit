@@ -17,6 +17,8 @@
 
 package org.apache.solr.handler.dataimport;
 
+import org.apache.solr.handler.dataimport.writer.SolrWriter;
+
 /**
  * <p> Exception class for all DataImportHandler exceptions </p>
  * <p/>
@@ -26,7 +28,7 @@ package org.apache.solr.handler.dataimport;
  * @since solr 1.3
  */
 public class DataImportHandlerException extends RuntimeException {
-  private int errCode;
+  private final int errCode;
 
   public boolean debugged = false;
 

@@ -8,9 +8,9 @@ import java.util.Map;
 import java.util.Set;
 
 import org.apache.solr.handler.dataimport.Context;
-import org.apache.solr.handler.dataimport.DataSource;
-import org.apache.solr.handler.dataimport.EntityProcessorBase;
 import org.apache.solr.handler.dataimport.VariableResolver;
+import org.apache.solr.handler.dataimport.datasource.DataSource;
+import org.apache.solr.handler.dataimport.processor.EntityProcessorBase;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 

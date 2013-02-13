@@ -17,25 +17,39 @@
 
 package org.apache.solr.handler.dataimport;
 
-import org.apache.solr.common.SolrException;
+import static org.apache.solr.handler.dataimport.DataImportHandlerException.SEVERE;
+import static org.apache.solr.handler.dataimport.DataImportHandlerException.wrapAndThrow;
+import static org.apache.solr.handler.dataimport.writer.SolrWriter.LAST_INDEX_KEY;
+
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.Collections;
+import java.util.Date;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.Iterator;
+import java.util.LinkedHashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Properties;
+import java.util.Set;
+import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicLong;
+
 import org.apache.solr.common.SolrInputDocument;
 import org.apache.solr.core.SolrCore;
 import org.apache.solr.handler.dataimport.config.ConfigNameConstants;
 import org.apache.solr.handler.dataimport.config.DIHConfiguration;
 import org.apache.solr.handler.dataimport.config.Entity;
 import org.apache.solr.handler.dataimport.config.EntityField;
-
-import static org.apache.solr.handler.dataimport.SolrWriter.LAST_INDEX_KEY;
-import static org.apache.solr.handler.dataimport.DataImportHandlerException.*;
-import org.apache.solr.schema.SchemaField;
+import org.apache.solr.handler.dataimport.processor.EntityProcessor;
+import org.apache.solr.handler.dataimport.processor.EntityProcessorWrapper;
+import org.apache.solr.handler.dataimport.processor.SqlEntityProcessor;
+import org.apache.solr.handler.dataimport.properties.DIHPropertiesWriter;
+import org.apache.solr.handler.dataimport.writer.DIHWriter;
+import org.apache.solr.handler.dataimport.writer.SolrWriter;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
-import com.indexisto.dit.data.exception.DataSourceException;
-
-import java.util.*;
-import java.util.concurrent.atomic.AtomicBoolean;
-import java.util.concurrent.atomic.AtomicLong;
 
 /**
  * <p> {@link DocBuilder} is responsible for creating Solr documents out of the given configuration. It also maintains
@@ -58,26 +72,26 @@ public class DocBuilder {
   private EntityProcessorWrapper currentEntityProcessorWrapper;
 
   @SuppressWarnings("unchecked")
-  private Map statusMessages = Collections.synchronizedMap(new LinkedHashMap());
+  private final Map statusMessages = Collections.synchronizedMap(new LinkedHashMap());
 
   public Statistics importStatistics = new Statistics();
 
   DIHWriter writer;
 
-  boolean verboseDebug = false;
+  public boolean verboseDebug = false;
 
   Map<String, Object> session = new HashMap<String, Object>();
 
-  static final ThreadLocal<DocBuilder> INSTANCE = new ThreadLocal<DocBuilder>();
-  private Map<String, Object> functionsNamespace;
-  private Properties persistedProperties;
-  
-  private DIHPropertiesWriter propWriter;
+  public static final ThreadLocal<DocBuilder> INSTANCE = new ThreadLocal<DocBuilder>();
+  private final Map<String, Object> functionsNamespace;
+  private final Properties persistedProperties;
+
+  private final DIHPropertiesWriter propWriter;
   private static final String PARAM_WRITER_IMPL = "writerImpl";
   private static final String DEFAULT_WRITER_NAME = "SolrWriter";
   private DebugLogger debugLogger;
   private final RequestInfo reqParams;
-  
+
   @SuppressWarnings("unchecked")
   public DocBuilder(DataImporter dataImporter, SolrWriter solrWriter, DIHPropertiesWriter propWriter, RequestInfo reqParams) {
     INSTANCE.set(this);
@@ -88,27 +102,27 @@ public class DocBuilder {
     verboseDebug = reqParams.isDebug() && reqParams.getDebugInfo().verbose;
     persistedProperties = propWriter.readIndexerProperties();
     functionsNamespace = EvaluatorBag.getFunctionsNamespace(this.dataImporter.getConfig().getFunctions(), this, getVariableResolver());
-    
+
     String writerClassStr = null;
     if(reqParams!=null && reqParams.getRawParams() != null) {
       writerClassStr = (String) reqParams.getRawParams().get(PARAM_WRITER_IMPL);
     }
     if(writerClassStr != null && !writerClassStr.equals(DEFAULT_WRITER_NAME) && !writerClassStr.equals(DocBuilder.class.getPackage().getName() + "." + DEFAULT_WRITER_NAME)) {
       try {
-        Class<DIHWriter> writerClass = loadClass(writerClassStr, dataImporter.getCore());
-        this.writer = writerClass.newInstance();
-      } catch (Exception e) {
+        final Class<DIHWriter> writerClass = loadClass(writerClassStr, dataImporter.getCore());
+        writer = writerClass.newInstance();
+      } catch (final Exception e) {
         throw new DataImportHandlerException(DataImportHandlerException.SEVERE, "Unable to load Writer implementation:" + writerClassStr, e);
       }
      } else {
       writer = solrWriter;
     }
-    ContextImpl ctx = new ContextImpl(null, null, null, null, reqParams.getRawParams(), null, this);
+    final ContextImpl ctx = new ContextImpl(null, null, null, null, reqParams.getRawParams(), null, this);
     writer.init(ctx);
   }
 
 
-  DebugLogger getDebugLogger(){
+  public DebugLogger getDebugLogger(){
     if (debugLogger == null) {
       debugLogger = new DebugLogger();
     }
@@ -118,11 +132,17 @@ public class DocBuilder {
   public VariableResolverImpl getVariableResolver() {
     try {
       VariableResolverImpl resolver = null;
+
+      // Solr cut off
+      /*
       if(dataImporter != null && dataImporter.getCore() != null
           && dataImporter.getCore().getResourceLoader().getCoreProperties() != null){
         resolver =  new VariableResolverImpl(dataImporter.getCore().getResourceLoader().getCoreProperties());
       } else resolver = new VariableResolverImpl();
-      Map<String, Object> indexerNamespace = new HashMap<String, Object>();
+      */
+      resolver = new VariableResolverImpl();
+
+      final Map<String, Object> indexerNamespace = new HashMap<String, Object>();
       if (persistedProperties.getProperty(LAST_INDEX_TIME) != null) {
         indexerNamespace.put(LAST_INDEX_TIME, persistedProperties.getProperty(LAST_INDEX_TIME));
       } else  {
@@ -132,9 +152,9 @@ public class DocBuilder {
       indexerNamespace.put(INDEX_START_TIME, dataImporter.getIndexStartTime());
       indexerNamespace.put("request", reqParams.getRawParams());
       indexerNamespace.put("functions", functionsNamespace);
-      for (Entity entity : dataImporter.getConfig().getEntities()) {
-        String key = entity.getName() + "." + SolrWriter.LAST_INDEX_KEY;
-        String lastIndex = persistedProperties.getProperty(key);
+      for (final Entity entity : dataImporter.getConfig().getEntities()) {
+        final String key = entity.getName() + "." + SolrWriter.LAST_INDEX_KEY;
+        final String lastIndex = persistedProperties.getProperty(key);
         if (lastIndex != null) {
           indexerNamespace.put(key, lastIndex);
         } else  {
@@ -144,25 +164,25 @@ public class DocBuilder {
       resolver.addNamespace(ConfigNameConstants.IMPORTER_NS_SHORT, indexerNamespace);
       resolver.addNamespace(ConfigNameConstants.IMPORTER_NS, indexerNamespace);
       return resolver;
-    } catch (Exception e) {
+    } catch (final Exception e) {
       wrapAndThrow(SEVERE, e);
       // unreachable statement
       return null;
     }
   }
-  
+
   private Map<String,Object> getFunctionsNamespace() {
     if(functionsNamespace==null) {
-      
+
     }
     return functionsNamespace;
   }
 
   private void invokeEventListener(String className) {
     try {
-      EventListener listener = (EventListener) loadClass(className, dataImporter.getCore()).newInstance();
+      final EventListener listener = (EventListener) loadClass(className, dataImporter.getCore()).newInstance();
       notifyListener(listener);
-    } catch (Exception e) {
+    } catch (final Exception e) {
       wrapAndThrow(SEVERE, e, "Unable to load class : " + className);
     }
   }
@@ -200,23 +220,23 @@ public class DocBuilder {
       statusMessages.put(DataImporter.MSG.TOTAL_DOCS_SKIPPED,
               importStatistics.skipDocCount);
 
-      List<String> entities = reqParams.getEntitiesToRun();
+      final List<String> entities = reqParams.getEntitiesToRun();
 
       // Trigger onImportStart
       if (config.getOnImportStart() != null) {
         invokeEventListener(config.getOnImportStart());
       }
-      AtomicBoolean fullCleanDone = new AtomicBoolean(false);
+      final AtomicBoolean fullCleanDone = new AtomicBoolean(false);
       //we must not do a delete of *:* multiple times if there are multiple root entities to be run
-      Properties lastIndexTimeProps = new Properties();
+      final Properties lastIndexTimeProps = new Properties();
       lastIndexTimeProps.setProperty(LAST_INDEX_KEY,
               DataImporter.DATE_TIME_FORMAT.get().format(dataImporter.getIndexStartTime()));
 
       epwList = new ArrayList<EntityProcessorWrapper>(config.getEntities().size());
-      for (Entity e : config.getEntities()) {
+      for (final Entity e : config.getEntities()) {
         epwList.add(getEntityProcessorWrapper(e));
       }
-      for (EntityProcessorWrapper epw : epwList) {
+      for (final EntityProcessorWrapper epw : epwList) {
         if (entities != null && !entities.contains(epw.getEntity().getName()))
           continue;
         lastIndexTimeProps.setProperty(epw.getEntity().getName() + "." + LAST_INDEX_KEY,
@@ -271,10 +291,10 @@ public class DocBuilder {
       statusMessages.put("Time taken", getTimeElapsedSince(startTime.get()));
       LOG.info("Time taken = " + getTimeElapsedSince(startTime.get()));
     // Vladimir Mikhel
-    } catch (DataImportHandlerException t) {
+    } catch (final DataImportHandlerException t) {
     	throw t;
     ///
-    } catch(Exception e)
+    } catch(final Exception e)
     {
       throw new RuntimeException(e);
     } finally
@@ -291,7 +311,7 @@ public class DocBuilder {
     }
   }
   private void closeEntityProcessorWrappers(List<EntityProcessorWrapper> epwList) {
-    for(EntityProcessorWrapper epw : epwList) {
+    for(final EntityProcessorWrapper epw : epwList) {
       epw.close();
       if(epw.getDatasource()!=null) {
         epw.getDatasource().close();
@@ -317,7 +337,7 @@ public class DocBuilder {
     }
     try {
       propWriter.persist(lastIndexTimeProps);
-    } catch (Exception e) {
+    } catch (final Exception e) {
       LOG.error("Could not write property file", e);
       statusMessages.put("error", "Could not write property file. Delta imports will not work. " +
           "Make sure your conf directory is writable");
@@ -331,14 +351,14 @@ public class DocBuilder {
   }
 
   private void doFullDump() {
-    addStatusMessage("Full Dump Started");    
+    addStatusMessage("Full Dump Started");
     buildDocument(getVariableResolver(), null, null, currentEntityProcessorWrapper, true, null);
   }
 
   @SuppressWarnings("unchecked")
   private void doDelta() {
     addStatusMessage("Delta Dump started");
-    VariableResolverImpl resolver = getVariableResolver();
+    final VariableResolverImpl resolver = getVariableResolver();
 
     if (config.getDeleteQuery() != null) {
       writer.deleteByQuery(config.getDeleteQuery());
@@ -347,7 +367,7 @@ public class DocBuilder {
     addStatusMessage("Identifying Delta");
     LOG.info("Starting delta collection.");
     Set<Map<String, Object>> deletedKeys = new HashSet<Map<String, Object>>();
-    Set<Map<String, Object>> allPks = collectDelta(currentEntityProcessorWrapper, resolver, deletedKeys);
+    final Set<Map<String, Object>> allPks = collectDelta(currentEntityProcessorWrapper, resolver, deletedKeys);
     if (stop.get())
       return;
     addStatusMessage("Deltas Obtained");
@@ -361,10 +381,10 @@ public class DocBuilder {
     writer.setDeltaKeys(allPks);
 
     statusMessages.put("Total Changed Documents", allPks.size());
-    VariableResolverImpl vri = getVariableResolver();
-    Iterator<Map<String, Object>> pkIter = allPks.iterator();
+    final VariableResolverImpl vri = getVariableResolver();
+    final Iterator<Map<String, Object>> pkIter = allPks.iterator();
     while (pkIter.hasNext()) {
-      Map<String, Object> map = pkIter.next();
+      final Map<String, Object> map = pkIter.next();
       vri.addNamespace(ConfigNameConstants.IMPORTER_NS_SHORT + ".delta", map);
       buildDocument(vri, null, map, currentEntityProcessorWrapper, true, null);
       pkIter.remove();
@@ -380,9 +400,9 @@ public class DocBuilder {
 
   private void deleteAll(Set<Map<String, Object>> deletedKeys) {
     LOG.info("Deleting stale documents ");
-    Iterator<Map<String, Object>> iter = deletedKeys.iterator();
+    final Iterator<Map<String, Object>> iter = deletedKeys.iterator();
     while (iter.hasNext()) {
-      Map<String, Object> map = iter.next();
+      final Map<String, Object> map = iter.next();
       String keyName = currentEntityProcessorWrapper.getEntity().isDocRoot() ? currentEntityProcessorWrapper.getEntity().getPk() : currentEntityProcessorWrapper.getEntity().getSchemaPk();
       Object key = map.get(keyName);
       if(key == null) {
@@ -398,7 +418,7 @@ public class DocBuilder {
       iter.remove();
     }
   }
-  
+
   @SuppressWarnings("unchecked")
   public void addStatusMessage(String msg) {
     statusMessages.put(msg, DataImporter.DATE_TIME_FORMAT.get().format(new Date()));
@@ -406,26 +426,26 @@ public class DocBuilder {
 
   private void resetEntity(EntityProcessorWrapper epw) {
     epw.setInitalized(false);
-    for (EntityProcessorWrapper child : epw.getChildren()) {
+    for (final EntityProcessorWrapper child : epw.getChildren()) {
       resetEntity(child);
     }
-    
+
   }
-  
+
   private void buildDocument(VariableResolverImpl vr, DocWrapper doc,
       Map<String,Object> pk, EntityProcessorWrapper epw, boolean isRoot,
       ContextImpl parentCtx) {
-    List<EntityProcessorWrapper> entitiesToDestroy = new ArrayList<EntityProcessorWrapper>();
+    final List<EntityProcessorWrapper> entitiesToDestroy = new ArrayList<EntityProcessorWrapper>();
     try {
       buildDocument(vr, doc, pk, epw, isRoot, parentCtx, entitiesToDestroy);
 	// Vladimir Mikhel
-	} catch (DataImportHandlerException t) {
+	} catch (final DataImportHandlerException t) {
 	  throw t;
 	///
-    } catch (Exception e) {
+    } catch (final Exception e) {
       throw new RuntimeException(e);
     } finally {
-      for (EntityProcessorWrapper entityWrapper : entitiesToDestroy) {
+      for (final EntityProcessorWrapper entityWrapper : entitiesToDestroy) {
         entityWrapper.destroy();
       }
       resetEntity(epw);
@@ -437,7 +457,7 @@ public class DocBuilder {
                              Map<String, Object> pk, EntityProcessorWrapper epw, boolean isRoot,
                              ContextImpl parentCtx, List<EntityProcessorWrapper> entitiesToDestroy) {
 
-    ContextImpl ctx = new ContextImpl(epw, vr, null,
+    final ContextImpl ctx = new ContextImpl(epw, vr, null,
             pk == null ? Context.FULL_DUMP : Context.DELTA_DUMP,
             session, parentCtx, this);
     epw.init(ctx);
@@ -445,7 +465,7 @@ public class DocBuilder {
       entitiesToDestroy.add(epw);
       epw.setInitalized(true);
     }
-    
+
     if (reqParams.getStart() > 0) {
       getDebugLogger().log(DIHLogLevels.DISABLE_LOGGING, null, null);
     }
@@ -482,7 +502,7 @@ public class DocBuilder {
             }
           }
 
-          Map<String, Object> arow = epw.nextRow();
+          final Map<String, Object> arow = epw.nextRow();
           if (arow == null) {
             break;
           }
@@ -507,7 +527,7 @@ public class DocBuilder {
           }
           if (epw.getEntity().getChildren() != null) {
             vr.addNamespace(epw.getEntity().getName(), arow);
-            for (EntityProcessorWrapper child : epw.getChildren()) {
+            for (final EntityProcessorWrapper child : epw.getChildren()) {
               buildDocument(vr, doc,
                   child.getEntity().isDocRoot() ? pk : null, child, false, ctx, entitiesToDestroy);
             }
@@ -517,7 +537,7 @@ public class DocBuilder {
             if (stop.get())
               return;
             if (!doc.isEmpty()) {
-              boolean result = writer.upload(doc);
+              final boolean result = writer.upload(doc);
               if(reqParams.isDebug()) {
                 reqParams.getDebugInfo().debugDocuments.add(doc);
               }
@@ -533,7 +553,7 @@ public class DocBuilder {
         } catch (DataSourceException t) {
         	LOG.info(">>> catched");
         	throw t;*/
-        } catch (DataImportHandlerException e) {
+        } catch (final DataImportHandlerException e) {
           if (verboseDebug) {
             getDebugLogger().log(DIHLogLevels.ENTITY_EXCEPTION, epw.getEntity().getName(), e);
           }
@@ -554,7 +574,7 @@ public class DocBuilder {
               throw e;
           } else
             throw e;
-        } catch (Throwable t) {
+        } catch (final Throwable t) {
           if (verboseDebug) {
             getDebugLogger().log(DIHLogLevels.ENTITY_EXCEPTION, epw.getEntity().getName(), t);
           }
@@ -592,8 +612,8 @@ public class DocBuilder {
     Object value = arow.get("$deleteDocById");
     if (value != null) {
       if (value instanceof Collection) {
-        Collection collection = (Collection) value;
-        for (Object o : collection) {
+        final Collection collection = (Collection) value;
+        for (final Object o : collection) {
           writer.deleteDoc(o.toString());
           importStatistics.deletedDocCount.incrementAndGet();
         }
@@ -601,12 +621,12 @@ public class DocBuilder {
         writer.deleteDoc(value);
         importStatistics.deletedDocCount.incrementAndGet();
       }
-    }    
+    }
     value = arow.get("$deleteDocByQuery");
     if (value != null) {
       if (value instanceof Collection) {
-        Collection collection = (Collection) value;
-        for (Object o : collection) {
+        final Collection collection = (Collection) value;
+        for (final Object o : collection) {
           writer.deleteByQuery(o.toString());
           importStatistics.deletedDocCount.incrementAndGet();
         }
@@ -645,13 +665,15 @@ public class DocBuilder {
   @SuppressWarnings("unchecked")
   private void addFields(Entity entity, DocWrapper doc,
                          Map<String, Object> arow, VariableResolver vr) {
-    for (Map.Entry<String, Object> entry : arow.entrySet()) {
-      String key = entry.getKey();
-      Object value = entry.getValue();
+    for (final Map.Entry<String, Object> entry : arow.entrySet()) {
+      final String key = entry.getKey();
+      final Object value = entry.getValue();
       if (value == null)  continue;
       if (key.startsWith("$")) continue;
-      Set<EntityField> field = entity.getColNameVsField().get(key);
-      if (field == null && dataImporter.getSchema() != null) {
+      final Set<EntityField> field = entity.getColNameVsField().get(key);
+
+      // Solr cut off
+      /*if (field == null && dataImporter.getSchema() != null) {
         // This can be a dynamic field or a field which does not have an entry in data-config ( an implicit field)
         SchemaField sf = dataImporter.getSchema().getFieldOrNull(key);
         if (sf == null) {
@@ -661,9 +683,9 @@ public class DocBuilder {
           addFieldToDoc(entry.getValue(), sf.getName(), 1.0f, sf.multiValued(), doc);
         }
         //else do nothing. if we add it it may fail
-      } else {
+      } else { */
         if (field != null) {
-          for (EntityField f : field) {
+          for (final EntityField f : field) {
             String name = f.getName();
             if(f.isDynamicName()){
               name =  vr.replaceTokens(name);
@@ -673,21 +695,21 @@ public class DocBuilder {
             }
           }
         }
-      }
+      //}
     }
   }
 
   private void addFieldToDoc(Object value, String name, float boost, boolean multiValued, DocWrapper doc) {
     if (value instanceof Collection) {
-      Collection collection = (Collection) value;
+      final Collection collection = (Collection) value;
       if (multiValued) {
-        for (Object o : collection) {
+        for (final Object o : collection) {
           if (o != null)
             doc.addField(name, o, boost);
         }
       } else {
         if (doc.getField(name) == null)
-          for (Object o : collection) {
+          for (final Object o : collection) {
             if (o != null)  {
               doc.addField(name, o, boost);
               break;
@@ -712,16 +734,16 @@ public class DocBuilder {
       try {
         entityProcessor = (EntityProcessor) loadClass(entity.getProcessorName(), dataImporter.getCore())
                 .newInstance();
-      } catch (Exception e) {
+      } catch (final Exception e) {
         wrapAndThrow (SEVERE,e,
                 "Unable to load EntityProcessor implementation for entity:" + entity.getName());
       }
     }
-    EntityProcessorWrapper epw = new EntityProcessorWrapper(entityProcessor, entity, this);
-    for(Entity e1 : entity.getChildren()) {
+    final EntityProcessorWrapper epw = new EntityProcessorWrapper(entityProcessor, entity, this);
+    for(final Entity e1 : entity.getChildren()) {
       epw.getChildren().add(getEntityProcessorWrapper(e1));
     }
-      
+
     return epw;
   }
 
@@ -730,7 +752,7 @@ public class DocBuilder {
       throw new IllegalArgumentException(
         String.format("deltaQuery returned a row with null for primary key %s", pk));
     String resolvedPk = null;
-    for (String columnName : row.keySet()) {
+    for (final String columnName : row.keySet()) {
       if (columnName.endsWith("." + pk) || pk.endsWith("." + columnName)) {
         if (resolvedPk != null)
           throw new IllegalArgumentException(
@@ -761,28 +783,28 @@ public class DocBuilder {
     if (stop.get())
       return new HashSet();
 
-    ContextImpl context1 = new ContextImpl(epw, resolver, null, Context.FIND_DELTA, session, null, this);
+    final ContextImpl context1 = new ContextImpl(epw, resolver, null, Context.FIND_DELTA, session, null, this);
     epw.init(context1);
 
-    Set<Map<String, Object>> myModifiedPks = new HashSet<Map<String, Object>>();
+    final Set<Map<String, Object>> myModifiedPks = new HashSet<Map<String, Object>>();
 
-   
 
-    for (EntityProcessorWrapper childEpw : epw.getChildren()) {
+
+    for (final EntityProcessorWrapper childEpw : epw.getChildren()) {
       //this ensures that we start from the leaf nodes
       myModifiedPks.addAll(collectDelta(childEpw, resolver, deletedRows));
       //someone called abort
       if (stop.get())
         return new HashSet();
     }
-    
+
     // identifying the modified rows for this entity
-    Map<String, Map<String, Object>> deltaSet = new HashMap<String, Map<String, Object>>();
+    final Map<String, Map<String, Object>> deltaSet = new HashMap<String, Map<String, Object>>();
     LOG.info("Running ModifiedRowKey() for Entity: " + epw.getEntity().getName());
     //get the modified rows in this entity
     String pk = epw.getEntity().getPk();
     while (true) {
-      Map<String, Object> row = epw.nextModifiedRowKey();
+      final Map<String, Object> row = epw.nextModifiedRowKey();
 
       if (row == null)
         break;
@@ -800,14 +822,14 @@ public class DocBuilder {
         return new HashSet();
     }
     //get the deleted rows for this entity
-    Set<Map<String, Object>> deletedSet = new HashSet<Map<String, Object>>();
+    final Set<Map<String, Object>> deletedSet = new HashSet<Map<String, Object>>();
     while (true) {
-      Map<String, Object> row = epw.nextDeletedRowKey();
+      final Map<String, Object> row = epw.nextDeletedRowKey();
       if (row == null)
         break;
 
       deletedSet.add(row);
-      
+
       Object pkValue = row.get(pk);
       if (pkValue == null) {
         pk = findMatchingPkColumn(pk, row);
@@ -815,7 +837,7 @@ public class DocBuilder {
       }
 
       // Remove deleted rows from the delta rows
-      String deletedRowPk = pkValue.toString();
+      final String deletedRowPk = pkValue.toString();
       if (deltaSet.containsKey(deletedRowPk)) {
         deltaSet.remove(deletedRowPk);
       }
@@ -830,20 +852,20 @@ public class DocBuilder {
     LOG.info("Completed DeletedRowKey for Entity: " + epw.getEntity().getName() + " rows obtained : " + deletedSet.size());
 
     myModifiedPks.addAll(deltaSet.values());
-    Set<Map<String, Object>> parentKeyList = new HashSet<Map<String, Object>>();
+    final Set<Map<String, Object>> parentKeyList = new HashSet<Map<String, Object>>();
     //all that we have captured is useless (in a sub-entity) if no rows in the parent is modified because of these
     //propogate up the changes in the chain
     if (epw.getEntity().getParentEntity() != null) {
       // identifying deleted rows with deltas
 
-      for (Map<String, Object> row : myModifiedPks) {
+      for (final Map<String, Object> row : myModifiedPks) {
         getModifiedParentRows(resolver.addNamespace(epw.getEntity().getName(), row), epw.getEntity().getName(), epw, parentKeyList);
         // check for abort
         if (stop.get())
           return new HashSet();
       }
       // running the same for deletedrows
-      for (Map<String, Object> row : deletedSet) {
+      for (final Map<String, Object> row : deletedSet) {
         getModifiedParentRows(resolver.addNamespace(epw.getEntity().getName(), row), epw.getEntity().getName(), epw, parentKeyList);
         // check for abort
         if (stop.get())
@@ -864,7 +886,7 @@ public class DocBuilder {
                                      Set<Map<String, Object>> parentKeyList) {
     try {
       while (true) {
-        Map<String, Object> parentRow = entityProcessor
+        final Map<String, Object> parentRow = entityProcessor
                 .nextModifiedParentRowKey();
         if (parentRow == null)
           break;
@@ -885,7 +907,7 @@ public class DocBuilder {
     stop.set(true);
   }
 
-  private AtomicBoolean stop = new AtomicBoolean(false);
+  private final AtomicBoolean stop = new AtomicBoolean(false);
 
   public static final String TIME_ELAPSED = "Time Elapsed";
 
@@ -903,18 +925,22 @@ public class DocBuilder {
 
 
   @SuppressWarnings("unchecked")
-  static Class loadClass(String name, SolrCore core) throws ClassNotFoundException {
+public static Class loadClass(String name, SolrCore core) throws ClassNotFoundException {
     try {
-      return core != null ?
-              core.getResourceLoader().findClass(name, Object.class) :
-              Class.forName(name);
-    } catch (Exception e) {
+      // Solr cut off
+      //return core != null ?
+      //        core.getResourceLoader().findClass(name, Object.class) :
+      //        Class.forName(name);
+      return Class.forName(name);
+    } catch (final Exception e) {
       try {
-        String n = DocBuilder.class.getPackage().getName() + "." + name;
-        return core != null ?
-                core.getResourceLoader().findClass(n, Object.class) :
-                Class.forName(n);
-      } catch (Exception e1) {
+        final String n = DocBuilder.class.getPackage().getName() + "." + name;
+        // Solr cut off
+        //return core != null ?
+        //        core.getResourceLoader().findClass(n, Object.class) :
+        //        Class.forName(n);
+        return Class.forName(n);
+      } catch (final Exception e1) {
         throw new ClassNotFoundException("Unable to load " + name + " or " + DocBuilder.class.getPackage().getName() + "." + name, e);
       }
     }
@@ -934,16 +960,16 @@ public class DocBuilder {
     public AtomicLong skipDocCount = new AtomicLong();
 
     public Statistics add(Statistics stats) {
-      this.docCount.addAndGet(stats.docCount.get());
-      this.deletedDocCount.addAndGet(stats.deletedDocCount.get());
-      this.rowsCount.addAndGet(stats.rowsCount.get());
-      this.queryCount.addAndGet(stats.queryCount.get());
+      docCount.addAndGet(stats.docCount.get());
+      deletedDocCount.addAndGet(stats.deletedDocCount.get());
+      rowsCount.addAndGet(stats.rowsCount.get());
+      queryCount.addAndGet(stats.queryCount.get());
 
       return this;
     }
 
     public Map<String, Object> getStatsSnapshot() {
-      Map<String, Object> result = new HashMap<String, Object>();
+      final Map<String, Object> result = new HashMap<String, Object>();
       result.put("docCount", docCount.get());
       result.put("deletedDocCount", deletedDocCount.get());
       result.put("rowCount", rowsCount.get());

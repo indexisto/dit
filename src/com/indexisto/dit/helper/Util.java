@@ -11,14 +11,14 @@ import java.util.List;
 import java.util.Map;
 
 import org.apache.commons.io.IOUtils;
-import org.apache.log4j.Logger;
 import org.codehaus.jettison.json.JSONArray;
 import org.codehaus.jettison.json.JSONException;
 import org.codehaus.jettison.json.JSONObject;
+//import org.apache.log4j.Logger;
 
 public class Util {
 
-    private static Logger log = Logger.getLogger(Util.class);
+    //private static Logger log = Logger.getLogger(Util.class);
 
     @SuppressWarnings("unchecked")
     public static Map createMap(Object... args) {

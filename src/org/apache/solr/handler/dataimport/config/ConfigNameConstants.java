@@ -20,7 +20,7 @@ import java.util.Collections;
 import java.util.HashSet;
 import java.util.Set;
 
-import org.apache.solr.handler.dataimport.SolrWriter;
+import org.apache.solr.handler.dataimport.writer.SolrWriter;
 
 public class ConfigNameConstants {
   public static final String SCRIPT = "script";
@@ -47,7 +47,7 @@ public class ConfigNameConstants {
 
   public static final Set<String> RESERVED_WORDS;
   static{
-    Set<String> rw =  new HashSet<String>();
+    final Set<String> rw =  new HashSet<String>();
     rw.add(IMPORTER_NS);
     rw.add(IMPORTER_NS_SHORT);
     rw.add("request");
@@ -56,5 +56,5 @@ public class ConfigNameConstants {
     rw.add("session");
     rw.add(SolrWriter.LAST_INDEX_KEY);
     RESERVED_WORDS = Collections.unmodifiableSet(rw);
-  } 
+  }
 }

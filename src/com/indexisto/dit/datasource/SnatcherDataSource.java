@@ -9,7 +9,7 @@ import java.util.Map;
 import java.util.Properties;
 
 import org.apache.solr.handler.dataimport.Context;
-import org.apache.solr.handler.dataimport.DataSource;
+import org.apache.solr.handler.dataimport.datasource.DataSource;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 

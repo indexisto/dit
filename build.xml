@@ -15,7 +15,7 @@
 		<fileset dir="${lib-initial.dir}/j2ee/">
 			<include name="**/*.jar" />
 		</fileset>
-		<fileset dir="${lib-initial.dir}/http/">
+		<fileset dir="${lib-initial.dir}/apache-http/">
 			<include name="**/*.jar" />
 		</fileset>
 		<fileset dir="${lib-initial.dir}/json/">
@@ -24,9 +24,12 @@
 		<fileset dir="${lib-initial.dir}/jdbc/">
 			<include name="**/*.jar" />
 		</fileset>
-		<fileset dir="${lib-initial.dir}/solr/">
+		<fileset dir="${lib-initial.dir}/logging/">
 			<include name="**/*.jar" />
 		</fileset>
+		<fileset dir="${lib-initial.dir}/apache-commons/">
+			<include name="**/*.jar" />
+		</fileset>		
 		<pathelement path="${classes.dir}" />
 	</path>
 
@@ -51,7 +54,7 @@
 
 	<target name="-setup-lib" depends="-clean">
 		<copy todir="${lib.dir}">
-			<fileset dir="${lib-initial.dir}/http">
+			<fileset dir="${lib-initial.dir}/apache-http">
 				<include name="*.jar" />
 			</fileset>
 			<fileset dir="${lib-initial.dir}/json">
@@ -60,9 +63,12 @@
 			<fileset dir="${lib-initial.dir}/jdbc">
 				<include name="*.jar" />
 			</fileset>
-			<fileset dir="${lib-initial.dir}/solr">
+			<fileset dir="${lib-initial.dir}/logging">
 				<include name="*.jar" />
-			</fileset>			
+			</fileset>
+			<fileset dir="${lib-initial.dir}/apache-commons/">
+				<include name="**/*.jar" />
+			</fileset>				
 		</copy>
 		<echo message="lib setup complete" />
 	</target>

@@ -4,7 +4,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 import org.apache.solr.common.SolrInputDocument;
-import org.apache.solr.handler.dataimport.SolrWriter;
+import org.apache.solr.handler.dataimport.writer.SolrWriter;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -25,7 +25,7 @@ public class ElasticWriter extends SolrWriter {
 
 	public ElasticWriter(String domain, int port, String index,
 	        String entity, String charset, ImportProcessLogger processLogger) {
-		super(null, null); // processor?
+		super();
 
 		final StringBuilder urlBuilder = new StringBuilder();
 		urlBuilder.append("http://").

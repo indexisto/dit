@@ -16,8 +16,6 @@ package org.apache.solr.handler.dataimport;
  * limitations under the License.
  */
 
-import org.apache.solr.common.util.NamedList;
-
 import java.io.PrintWriter;
 import java.io.StringWriter;
 import java.text.MessageFormat;
@@ -25,6 +23,13 @@ import java.util.List;
 import java.util.Map;
 import java.util.Properties;
 import java.util.Stack;
+
+import org.apache.solr.common.util.NamedList;
+import org.apache.solr.handler.dataimport.datasource.DataSource;
+import org.apache.solr.handler.dataimport.processor.EntityProcessorWrapper;
+import org.apache.solr.handler.dataimport.transformer.ScriptTransformer;
+import org.apache.solr.handler.dataimport.transformer.Transformer;
+import org.apache.solr.handler.dataimport.writer.SolrWriter;
 
 /**
  * <p>
@@ -41,7 +46,7 @@ import java.util.Stack;
  *
  * @since solr 1.3
  */
-class DebugLogger {
+public class DebugLogger {
   private Stack<DebugInfo> debugStack;
 
   NamedList output;
@@ -49,7 +54,7 @@ class DebugLogger {
 
   private static final String LINE = "---------------------------------------------";
 
-  private MessageFormat fmt = new MessageFormat(
+  private final MessageFormat fmt = new MessageFormat(
           "----------- row #{0}-------------");
 
   boolean enabled = true;
@@ -121,7 +126,7 @@ class DebugLogger {
       addToNamedList(debugStack.peek().lst, row);
       debugStack.peek().lst.add(null, LINE);
       if (row instanceof DataImportHandlerException) {
-        DataImportHandlerException dataImportHandlerException = (DataImportHandlerException) row;
+        final DataImportHandlerException dataImportHandlerException = (DataImportHandlerException) row;
         dataImportHandlerException.debugged = true;
       }
     } else if (DIHLogLevels.ENTITY_META == event) {
@@ -129,7 +134,7 @@ class DebugLogger {
       debugStack.peek().lst.add(name, row);
     } else if (DIHLogLevels.ENTITY_EXCEPTION == event) {
       if (row instanceof DataImportHandlerException) {
-        DataImportHandlerException dihe = (DataImportHandlerException) row;
+        final DataImportHandlerException dihe = (DataImportHandlerException) row;
         if (dihe.debugged)
           return;
         dihe.debugged = true;
@@ -143,7 +148,7 @@ class DebugLogger {
 
   private void popAllTransformers() {
     while (true) {
-      DIHLogLevels type = debugStack.peek().type;
+      final DIHLogLevels type = debugStack.peek().type;
       if (type == DIHLogLevels.START_DOC || type == DIHLogLevels.START_ENTITY)
         break;
       debugStack.pop();
@@ -152,17 +157,17 @@ class DebugLogger {
 
   private void addToNamedList(NamedList nl, Object row) {
     if (row instanceof List) {
-      List list = (List) row;
-      NamedList l = new NamedList();
+      final List list = (List) row;
+      final NamedList l = new NamedList();
       nl.add(null, l);
-      for (Object o : list) {
-        Map<String, Object> map = (Map<String, Object>) o;
-        for (Map.Entry<String, Object> entry : map.entrySet())
+      for (final Object o : list) {
+        final Map<String, Object> map = (Map<String, Object>) o;
+        for (final Map.Entry<String, Object> entry : map.entrySet())
           nl.add(entry.getKey(), entry.getValue());
       }
     } else if (row instanceof Map) {
-      Map<String, Object> map = (Map<String, Object>) row;
-      for (Map.Entry<String, Object> entry : map.entrySet())
+      final Map<String, Object> map = (Map<String, Object>) row;
+      for (final Map.Entry<String, Object> entry : map.entrySet())
         nl.add(entry.getKey(), entry.getValue());
     }
   }
@@ -182,17 +187,17 @@ class DebugLogger {
       @Override
       public Object getData(String query) {
         log(DIHLogLevels.ENTITY_META, "query", query);
-        long start = System.currentTimeMillis();
+        final long start = System.currentTimeMillis();
         try {
           return ds.getData(query);
-        } catch (DataImportHandlerException de) {
+        } catch (final DataImportHandlerException de) {
           log(DIHLogLevels.ENTITY_EXCEPTION,
                   null, de);
           throw de;
-        } catch (Exception e) {
+        } catch (final Exception e) {
           log(DIHLogLevels.ENTITY_EXCEPTION,
                   null, e);
-          DataImportHandlerException de = new DataImportHandlerException(
+          final DataImportHandlerException de = new DataImportHandlerException(
                   DataImportHandlerException.SEVERE, "", e);
           de.debugged = true;
           throw de;
@@ -204,23 +209,23 @@ class DebugLogger {
     };
   }
 
-  Transformer wrapTransformer(final Transformer t) {
+  public Transformer wrapTransformer(final Transformer t) {
     return new Transformer() {
       @Override
       public Object transformRow(Map<String, Object> row, Context context) {
         log(DIHLogLevels.PRE_TRANSFORMER_ROW, null, row);
-        String tName = getTransformerName(t);
+        final String tName = getTransformerName(t);
         Object result = null;
         try {
           result = t.transformRow(row, context);
           log(DIHLogLevels.TRANSFORMED_ROW, tName, result);
-        } catch (DataImportHandlerException de) {
+        } catch (final DataImportHandlerException de) {
           log(DIHLogLevels.TRANSFORMER_EXCEPTION, tName, de);
           de.debugged = true;
           throw de;
-        } catch (Exception e) {
+        } catch (final Exception e) {
           log(DIHLogLevels.TRANSFORMER_EXCEPTION, tName, e);
-          DataImportHandlerException de = new DataImportHandlerException(DataImportHandlerException.SEVERE, "", e);
+          final DataImportHandlerException de = new DataImportHandlerException(DataImportHandlerException.SEVERE, "", e);
           de.debugged = true;
           throw de;
         }
@@ -230,18 +235,18 @@ class DebugLogger {
   }
 
   public static String getStacktraceString(Exception e) {
-    StringWriter sw = new StringWriter();
+    final StringWriter sw = new StringWriter();
     e.printStackTrace(new PrintWriter(sw));
     return sw.toString();
   }
 
   static String getTransformerName(Transformer t) {
-    Class transClass = t.getClass();
+    final Class transClass = t.getClass();
     if (t instanceof EntityProcessorWrapper.ReflectionTransformer) {
       return ((EntityProcessorWrapper.ReflectionTransformer) t).trans;
     }
     if (t instanceof ScriptTransformer) {
-      ScriptTransformer scriptTransformer = (ScriptTransformer) t;
+      final ScriptTransformer scriptTransformer = (ScriptTransformer) t;
       return "script:" + scriptTransformer.getFunctionName();
     }
     if (transClass.getPackage().equals(DebugLogger.class.getPackage())) {

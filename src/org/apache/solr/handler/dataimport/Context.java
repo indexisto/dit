@@ -17,10 +17,12 @@
 
 package org.apache.solr.handler.dataimport;
 
-import org.apache.solr.core.SolrCore;
-
 import java.util.List;
 import java.util.Map;
+
+import org.apache.solr.core.SolrCore;
+import org.apache.solr.handler.dataimport.datasource.DataSource;
+import org.apache.solr.handler.dataimport.processor.EntityProcessor;
 
 /**
  * <p>
@@ -188,7 +190,7 @@ public abstract class Context {
   public abstract Map<String, Object> getStats();
 
   /**
-   * Returns the text specified in the script tag in the data-config.xml 
+   * Returns the text specified in the script tag in the data-config.xml
    */
   public abstract String getScript();
 
@@ -206,7 +208,7 @@ public abstract class Context {
   public abstract void deleteDocByQuery(String query);
 
   /**Use this directly to  resolve variable
-   * @param var the variable name 
+   * @param var the variable name
    * @return the resolved value
    */
   public abstract Object resolve(String var);

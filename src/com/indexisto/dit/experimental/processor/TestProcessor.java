@@ -4,7 +4,7 @@ import java.util.Iterator;
 import java.util.Map;
 import java.util.Set;
 
-import org.apache.solr.handler.dataimport.SqlEntityProcessor;
+import org.apache.solr.handler.dataimport.processor.SqlEntityProcessor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -15,18 +15,18 @@ public class TestProcessor extends SqlEntityProcessor {
 
 	@Override
 	protected Map<String, Object> getNext() {
-		Map<String, Object> map = super.getNext();
+		final Map<String, Object> map = super.getNext();
 		if (map != null) {
-			Set<String> keys = map.keySet();
+			final Set<String> keys = map.keySet();
 			if (keys != null) {
-				Iterator<String> iterator = keys.iterator();
+				final Iterator<String> iterator = keys.iterator();
 				while (iterator.hasNext()) {
-					String key = (String) iterator.next();
+					final String key = iterator.next();
 					log.info("test processor: " + key + " -> " + map.get(key));
 				}
-			}	
-		}	
+			}
+		}
 		return map;
 	}
-	
+
 }
