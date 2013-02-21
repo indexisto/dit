@@ -17,9 +17,16 @@
 				ES port: <input type="text" name="esport" value="9200"><br><br>
 				ES index name: <input type="text" name="esindex" value="test"><br><br>
 				
-				Snatcher script URL: <input type="text" name="snatcher" value="http://46.4.39.138:8082/snatcher.php" style="width: 300px;"><br><br>
+				Entity to import: <input type="text" name="entity" value="forum_message"><br><br>
+				Offset: <input type="text" name="offset" value="0" style="width:30px;">
+				Limit: <input type="text" name="limit" value="50" style="width:30px;"><br><br>
+				Presets: <select id="command" name="command">
+					<option value="full-import">full-import</option>
+					<option value="delta-import">delta-import</option>
+				</select><br><br>
+				Last import time: <input type="text" name="lastTime" value="2013-02-15 00:00:00"><br><br>
+				<br><br><br>
 				
-				Entity to import: <input type="text" name="entity" value="forum_message"><br><br><br><br>
 				Presets: <select id="preset" name="preset"></select><br>
 				Report <b>SQL requests</b>: <input type="checkbox" name="requestsLog" checked="checked"><br>
 				Report <b>SQL responses</b>: <input type="checkbox" name="responsesLog"><br>
@@ -41,10 +48,10 @@
 				
 				function loadPreset(presetName) {
 					$.get('resources/presets/' + presetName, function(data) {
-						presets[presetName] = data;						
-						presets.push(data);
-						editor.setValue(presets[presetName]);
+						presets[presetName] = data;
 						$("#preset").append(new Option(presetName, presetName));
+						$("#preset").val(presetName);
+						editor.setValue(presets[presetName]);
 					}, "text");
 				}
 				
@@ -57,7 +64,9 @@
 				
 				$("#preset").change(function () {
  					$("select option:selected").each(function () {
- 						editor.setValue(presets[$(this).text()]);
+ 						if (presets[$(this).text()] != null) {
+ 							editor.setValue(presets[$(this).text()]);
+ 						}	
 					});
 					$("div").text(str);
 				});

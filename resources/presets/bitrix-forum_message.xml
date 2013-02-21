@@ -16,7 +16,8 @@
             f.name AS forum_name 
             FROM b_forum_message fm
             LEFT JOIN b_forum f ON f.id = fm.forum_id 
-            WHERE fm.approved='Y' AND f.active='Y'">
+            WHERE fm.approved='Y' AND f.active='Y' 
+            LIMIT ${offset}, ${limit}">
       <field column="id" name="id" />
       <field column="forum_id" name="forum_id" />
       <field column="post_date" name="post_date" />

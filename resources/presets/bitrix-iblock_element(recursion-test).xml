@@ -16,16 +16,29 @@
     
   <document>
   
-    <entity name="document"
+    <entity name="document" 
+      test="${dih.last_index_time}"
+      agent="http://46.4.39.138:8082/snatcher.php" 
       query="SELECT  
          id, iblock_id, iblock_section_id, 
          preview_picture, code as element_code,  
          name, preview_text, detail_text, searchable_content, 
          date_create, created_by, active_from, active_to  
-         FROM b_iblock_element WHERE active='Y' LIMIT 80, 100">
+         FROM b_iblock_element WHERE active='Y' 
+         LIMIT ${offset}, ${limit}"
+      deltaQuery="SELECT  
+         id, iblock_id, iblock_section_id, 
+         preview_picture, code as element_code,  
+         name, preview_text, detail_text, searchable_content, 
+         date_create, created_by, active_from, active_to  
+         FROM b_iblock_element WHERE date_create > '${last_index_time}' 
+         LIMIT ${offset}, ${limit}"
+      dateFormat="yyyy-MM-dd HH:mm:ss">
+         
       <field column="name" name="name" multiValued="true" />
 
       <entity name="section"
+        agent="http://46.4.39.138:8082/snatcher.php"
         processor="com.indexisto.dit.processor.HierarchyProcessor"
         transformer="script:transformIt"
         query="SELECT 

@@ -2,20 +2,20 @@ package com.indexisto.dit.data.logger;
 
 import java.util.Date;
 
-public class LogRecord {
+public class DihLogRecord {
 
     private String message;
     private Date time;
 
-    public LogRecord() {
+    public DihLogRecord() {
         this("");
     }
 
-    public LogRecord(String message) {
+    public DihLogRecord(String message) {
         this(new Date(), message);
     }
 
-    public LogRecord(Date time, String message) {
+    public DihLogRecord(Date time, String message) {
         this.time = time;
         this.message = message;
     }

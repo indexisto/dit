@@ -62,6 +62,7 @@
     <!-- transformer="script:getElementUrl" 
     transformer="script:getPictureUrl" -->
     <entity name="iblockelement" 
+      agent="http://46.4.39.138:8082/snatcher.php" 
       transformer="script:getElementUrl"
       query="SELECT 
 			ibe.id, ibe.iblock_id, ibe.iblock_section_id, 
@@ -77,7 +78,8 @@
             LEFT JOIN b_iblock_section ibs ON ibs.id = ibe.iblock_section_id 
             LEFT JOIN b_iblock ib ON ib.id = ibe.iblock_id
             LEFT JOIN b_file f ON f.id = ibe.preview_picture 
-            WHERE ibe.active='Y' AND ibs.active='Y' AND ib.active='Y'">
+            WHERE ibe.active='Y' AND ibs.active='Y' AND ib.active='Y' 
+            LIMIT ${offset}, ${limit}">
       <field column="id" name="id" />
       <field column="name" name="name" />
       <field column="preview_text" name="preview_text" />

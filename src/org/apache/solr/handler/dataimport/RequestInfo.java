@@ -27,82 +27,75 @@ import org.apache.solr.common.util.StrUtils;
 
 public class RequestInfo {
   private final String command;
-  private final boolean debug;  
+  private final boolean debug;
   private final boolean syncMode;
-  private final boolean commit; 
+  private final boolean commit;
   private final boolean optimize;
   private final int start;
-  private final long rows; 
-  private final boolean clean; 
+  private final long rows;
+  private final boolean clean;
   private final List<String> entitiesToRun;
   private final Map<String,Object> rawParams;
   private final String configFile;
-  private final String dataConfig; 
-  
+  private final String dataConfig;
+
   //Vladimir Mikhel: added
   private final String datasource;
-  private final Map<String, Object> dataSourceParams;
-  
-  //TODO:  find a different home for these two...
-  private final ContentStream contentStream;  
-  private final DebugInfo debugInfo;
-  
-  //Vladimir Mikhel: added new param to requestParams - default data source "datasource" and "dataSourceParams"
-  public RequestInfo(Map<String,Object> requestParams, ContentStream stream) {
-    this.contentStream = stream;    
 
-    if (requestParams.containsKey("datasource")) { 
+  //TODO:  find a different home for these two...
+  private final ContentStream contentStream;
+  private final DebugInfo debugInfo;
+
+  //Vladimir Mikhel: added new param to requestParams - default data source "datasource"
+  public RequestInfo(Map<String,Object> requestParams, ContentStream stream) {
+    contentStream = stream;
+
+    if (requestParams.containsKey("datasource")) {
     	datasource = (String) requestParams.get("datasource");
     } else {
     	datasource = null;
     }
 
-    if (requestParams.containsKey("dataSourceParams")) { 
-    	dataSourceParams = (Map<String, Object>) requestParams.get("dataSourceParams");
-    } else {
-    	dataSourceParams = new HashMap<String, Object>();
-    }
-    
-    if (requestParams.containsKey("command")) { 
+    if (requestParams.containsKey("command")) {
       command = (String) requestParams.get("command");
     } else {
       command = null;
-    }    
-    boolean debugMode = StrUtils.parseBool((String) requestParams.get("debug"), false);    
+    }
+    final boolean debugMode = StrUtils.parseBool((String) requestParams.get("debug"), false);
     if (debugMode) {
       debug = true;
       debugInfo = new DebugInfo(requestParams);
     } else {
       debug = false;
       debugInfo = null;
-    }       
+    }
     if (requestParams.containsKey("clean")) {
       clean = StrUtils.parseBool( (String) requestParams.get("clean"), true);
     } else if (DataImporter.DELTA_IMPORT_CMD.equals(command) || DataImporter.IMPORT_CMD.equals(command)) {
       clean = false;
     } else  {
       clean = debug ? false : true;
-    }    
+    }
     optimize = StrUtils.parseBool((String) requestParams.get("optimize"), false);
     if(optimize) {
       commit = true;
     } else {
       commit = StrUtils.parseBool( (String) requestParams.get("commit"), (debug ? false : true));
-    }      
+    }
     if (requestParams.containsKey("rows")) {
       rows = Integer.parseInt((String) requestParams.get("rows"));
     } else {
       rows = debug ? 10 : Long.MAX_VALUE;
-    }      
-    
+    }
+
     if (requestParams.containsKey("start")) {
       start = Integer.parseInt((String) requestParams.get("start"));
     } else {
       start = 0;
     }
-    syncMode = StrUtils.parseBool((String) requestParams.get("synchronous"), false);    
-    
-    Object o = requestParams.get("entity");     
+    syncMode = StrUtils.parseBool((String) requestParams.get("synchronous"), false);
+
+    final Object o = requestParams.get("entity");
     List<String> modifiableEntities = null;
     if(o != null) {
       if (o instanceof String) {
@@ -110,14 +103,15 @@ public class RequestInfo {
         modifiableEntities.add((String) o);
       } else if (o instanceof List<?>) {
         @SuppressWarnings("unchecked")
+        final
         List<String> modifiableEntities1 = new ArrayList<String>((List<String>) o);
         modifiableEntities = modifiableEntities1;
-      } 
+      }
       entitiesToRun = Collections.unmodifiableList(modifiableEntities);
     } else {
       entitiesToRun = null;
     }
-    String configFileParam = (String) requestParams.get("config");
+    final String configFileParam = (String) requestParams.get("config");
     configFile = configFileParam;
     String dataConfigParam = (String) requestParams.get("dataConfig");
     if (dataConfigParam != null && dataConfigParam.trim().length() == 0) {
@@ -125,7 +119,7 @@ public class RequestInfo {
       dataConfigParam = null;
     }
     dataConfig = dataConfigParam;
-    this.rawParams = Collections.unmodifiableMap(new HashMap<String,Object>(requestParams));
+    rawParams = Collections.unmodifiableMap(new HashMap<String,Object>(requestParams));
   }
 
   public String getCommand() {
@@ -190,8 +184,4 @@ public class RequestInfo {
 		return datasource;
 	}
 
-	public Map<String, Object> getDataSourceParams() {
-		return dataSourceParams;
-	}
- 
 }

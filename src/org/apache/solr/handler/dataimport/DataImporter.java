@@ -31,7 +31,6 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Properties;
-import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.locks.ReentrantLock;
@@ -393,13 +392,13 @@ public class DataImporter {
         }
         copyProps.setProperty("maxRows", String.valueOf(rows));
       }
-      // Vladimir Mikhel: changed to SnatcherDataSource
+/*      // Vladimir Mikhel: changed to SnatcherDataSource
       if (dataSourceParams != null && dataSourceParams.size() > 0) {
     	  final Set<String> paramKeys = dataSourceParams.keySet();
     	  for (final String paramKey : paramKeys) {
     		copyProps.setProperty(paramKey, String.valueOf(dataSourceParams.get(paramKey)));
     	  }
-      }
+      }*/
       dataSrc.init(ctx, copyProps);
     } catch (final Exception e) {
       wrapAndThrow(SEVERE, e, "Failed to initialize DataSource: " + key.getDataSourceName());
@@ -486,13 +485,20 @@ public class DataImporter {
   }
 
   //Vladimir Mikhel: added params
-  Map<String, Object> dataSourceParams;
   String datasource;
 
   // Vladimir Mikhel: changed to public
   public void runCmd(RequestInfo reqParams, SolrWriter sw) {
+    // Vladimir Mikhel
+    boolean foundImportedEntityInMapping = false;
+    for (final Entity entity : config.getEntities()) {
+      for (final String entityNameToRun : reqParams.getEntitiesToRun()) {
+          if (entity.getName().equals(entityNameToRun)) foundImportedEntityInMapping = true;
+      }
+    }
+    if (!foundImportedEntityInMapping) throw new MappingException("No entity with specified name in mapping!");
+
 	datasource = reqParams.getDatasource();
-	dataSourceParams = reqParams.getDataSourceParams();
 
     final String command = reqParams.getCommand();
     if (command.equals(ABORT_CMD)) {
@@ -509,7 +515,10 @@ public class DataImporter {
       if (FULL_IMPORT_CMD.equals(command) || IMPORT_CMD.equals(command)) {
         doFullImport(sw, reqParams);
       } else if (command.equals(DELTA_IMPORT_CMD)) {
-        doDeltaImport(sw, reqParams);
+        // Vladimir Mikhel, Solr's delta import is obsolete
+        //doDeltaImport(sw, reqParams);
+        if (!isDeltaImportSupported) throw new MappingException("Root entity doesn't contain \"deltaQuery\"");
+        doFullImport(sw, reqParams);
       }
     } finally {
       importLock.unlock();

@@ -51,6 +51,8 @@ import org.apache.solr.handler.dataimport.writer.SolrWriter;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import com.indexisto.dit.DataImportHandler;
+
 /**
  * <p> {@link DocBuilder} is responsible for creating Solr documents out of the given configuration. It also maintains
  * statistics information. It depends on the {@link EntityProcessor} implementations to fetch data. </p>
@@ -729,7 +731,18 @@ public class DocBuilder {
   private EntityProcessorWrapper getEntityProcessorWrapper(Entity entity) {
     EntityProcessor entityProcessor = null;
     if (entity.getProcessorName() == null) {
-      entityProcessor = new SqlEntityProcessor();
+        // Vladimir Mikhel, getting default processor from DIH init params
+        final String defaultProcessorClassName = (String) getReqParams()
+                .getRawParams().get(DataImportHandler.DEFAULT_PROCESSOR);
+        if (defaultProcessorClassName != null && !defaultProcessorClassName.equals("")) {
+            try {
+                entityProcessor = (EntityProcessor) loadClass(
+                        defaultProcessorClassName, dataImporter.getCore()).newInstance();
+            } catch (final Exception e) {
+                LOG.error("Unable to load EntityProcessor implementation for entity:" + entity.getName(), e);
+            }
+        }
+        if (entityProcessor == null) entityProcessor = new SqlEntityProcessor();
     } else {
       try {
         entityProcessor = (EntityProcessor) loadClass(entity.getProcessorName(), dataImporter.getCore())

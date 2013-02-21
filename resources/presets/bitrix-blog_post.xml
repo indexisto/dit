@@ -5,6 +5,7 @@
 
   <document name="doc">
     <entity name="blog_post"
+      agent="http://46.4.39.138:8082/snatcher.php" 
       query="SELECT 
 	        bp.id as id, bp.blog_id, bp.author_id,  
 			bp.title, bp.detail_text, 
@@ -15,8 +16,22 @@
 			FROM b_blog_post bp 
 			LEFT JOIN b_user u ON u.id = bp.author_id 
 			LEFT JOIN b_blog b ON b.id = bp.blog_id  
-			WHERE bp.publish_status='P'"
-      transformer="TemplateTransformer">
+			WHERE bp.publish_status='P' 
+            LIMIT ${offset}, ${limit}"
+      deltaQuery="SELECT 
+          bp.id as id, bp.blog_id, bp.author_id,  
+          bp.title, bp.detail_text, 
+          bp.date_create, bp.date_publish, 
+          bp.keywords, bp.views, 
+          b.name AS blog_name, 
+          u.name, u.last_name, u.email
+          FROM b_blog_post bp 
+          LEFT JOIN b_user u ON u.id = bp.author_id 
+          LEFT JOIN b_blog b ON b.id = bp.blog_id  
+          WHERE bp.publish_status='P' AND bp.date_publish > '${last_index_time}' 
+          LIMIT ${offset}, ${limit}"      
+      transformer="org.apache.solr.handler.dataimport.transformer.TemplateTransformer" 
+      dateFormat="yyyy-MM-dd HH:mm:ss">
 
       <field column="id" name="id" />
       <field column="blog_id" name="blog_id" />
@@ -31,6 +46,7 @@
         template="${blog_post.name} ${blog_post.last_name} (${blog_post.email})" />
 
       <entity name="blog_comments"
+        agent="http://46.4.39.138:8082/snatcher.php"
         query="SELECT post_text AS comment_texts, id AS comment_ids 
 				FROM b_blog_comment 
 				WHERE post_id='${blog_post.id}' AND publish_status='P'">
@@ -38,6 +54,7 @@
         <field column="comment_ids" name="comment_ids" multiValued="true"/>
       </entity>
       <entity name="blog_category"
+        agent="http://46.4.39.138:8082/snatcher.php"
         query="SELECT bc.name AS blog_categories 
 				FROM b_blog_post_category bpc, b_blog_category bc 
 				WHERE bpc.post_id = '${blog_post.id}' 

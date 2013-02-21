@@ -4,18 +4,15 @@ import java.util.ArrayList;
 import java.util.List;
 
 import org.apache.solr.common.SolrInputDocument;
-import org.apache.solr.handler.dataimport.writer.SolrWriter;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import com.indexisto.dit.data.exception.WriterException;
-import com.indexisto.dit.data.logger.ImportProcessLogger;
 import com.indexisto.dit.helper.HttpClient;
 import com.indexisto.dit.helper.SolrDocumentConverter;
 
-public class ElasticWriter extends SolrWriter {
+public class ElasticWriter extends IndexistoWriter {
 
-    private final ImportProcessLogger processLogger;
 	private final String baseUrl;
 	private String charSet = "UTF-8"; //"Cp1251";
 	Boolean deleteAllCalled;
@@ -24,7 +21,7 @@ public class ElasticWriter extends SolrWriter {
 	private static Logger log = LoggerFactory.getLogger(ElasticWriter.class);
 
 	public ElasticWriter(String domain, int port, String index,
-	        String entity, String charset, ImportProcessLogger processLogger) {
+	        String entity, String charset) {
 		super();
 
 		final StringBuilder urlBuilder = new StringBuilder();
@@ -36,10 +33,9 @@ public class ElasticWriter extends SolrWriter {
 			append("/");
 		baseUrl = urlBuilder.toString();
 		charSet = charset;
-        this.processLogger = processLogger;
 	}
 
-	@Override
+    @Override
 	public boolean upload(SolrInputDocument doc) {
 		log.debug("upload()");
 		return docs.add(doc);
