@@ -59,7 +59,7 @@ public class MongoWriter extends IndexistoWriter {
             try {
                 object = SolrDocumentConverter.toMongoObject(document);
             } catch (final Exception e) {
-                throw new WriterException("Can not convert document into JSON for index", e);
+                throw new WriterException("Can not convert document into Mongo for index", e);
             }
             processLogger.logDocument(object.toString());
             log.debug("json: " + object);
@@ -67,7 +67,7 @@ public class MongoWriter extends IndexistoWriter {
             try {
                 collection.insert(object);
             } catch (final Exception e) {
-                throw new WriterException("Can not post document index", e);
+                throw new WriterException("Can not put document into mongo", e);
             }
         }
     }

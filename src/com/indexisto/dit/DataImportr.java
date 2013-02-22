@@ -59,10 +59,3 @@ public class DataImportr {
         }
     }
 }
-
-/*final BasicDBObject searchQuery = new BasicDBObject();
-searchQuery.put("id", 1);
-final DBCursor cursor = collection.find(searchQuery);
-while (cursor.hasNext()) {
-    System.out.println(cursor.next());
-}*/
