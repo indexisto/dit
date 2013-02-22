@@ -13,8 +13,8 @@ import com.indexisto.dit.data.exception.MappingException;
 import com.indexisto.dit.data.exception.WriterException;
 import com.indexisto.dit.data.logger.DihProcessLogger;
 import com.indexisto.dit.helper.Util;
-import com.indexisto.dit.writer.ElasticWriter;
 import com.indexisto.dit.writer.IndexistoWriter;
+import com.indexisto.dit.writer.MongoWriter;
 
 
 public class DataImportr {
@@ -25,7 +25,8 @@ public class DataImportr {
     public static void main(String[] args) {
         final String rootEntityName = "document";
         //final IndexistoWriter writer = new ElasticWriter("localhost", 9200, "test", rootEntityName, "UTF-8");
-        final IndexistoWriter writer = new ElasticWriter("localhost", 9200, "test", rootEntityName, "UTF-8");
+        //final IndexistoWriter writer = new ElasticWriter("localhost", 9200, "test", rootEntityName, "UTF-8");
+        final IndexistoWriter writer = new MongoWriter("localhost", 27017, "test", rootEntityName, "UTF-8");
 
         //final String mapping = Util.readFileToString("resources/presets/bitrix-blog_post.xml");
         //final String mapping = Util.readFileToString("resources/presets/bitrix-iblock_element.xml");
@@ -58,3 +59,10 @@ public class DataImportr {
         }
     }
 }
+
+/*final BasicDBObject searchQuery = new BasicDBObject();
+searchQuery.put("id", 1);
+final DBCursor cursor = collection.find(searchQuery);
+while (cursor.hasNext()) {
+    System.out.println(cursor.next());
+}*/

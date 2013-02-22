@@ -24,6 +24,7 @@ public class DataImportHandler {
     public static final String CACHE = "cache";
     public static final String DEFAULT_DATASOURCE = "datasource";
     public static final String DEFAULT_PROCESSOR = "processor";
+    public static final String MONGO_DB_NAME = "test";
 
 	private static Logger log = LoggerFactory.getLogger(DataImportHandler.class);
 	private final DihProcessLogger processLogger;
